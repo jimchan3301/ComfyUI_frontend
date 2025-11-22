@@ -288,6 +288,22 @@ export const CORE_SETTINGS: SettingParams[] = [
     experimental: true
   },
   {
+    id: 'Comfy.Workflow.ModelDownloadMirror.Enabled',
+    name: 'Enable model download mirror',
+    tooltip: 'Replace download URLs with mirror endpoints for faster downloads',
+    type: 'boolean',
+    defaultValue: false,
+    versionAdded: '1.18.0'
+  },
+  {
+    id: 'Comfy.Workflow.ModelDownloadMirror.Endpoint',
+    name: 'Model download mirror endpoint',
+    tooltip: 'The mirror endpoint to use for downloading models',
+    type: 'text',
+    defaultValue: 'https://hf-mirror.com/',
+    versionAdded: '1.18.0'
+  },
+  {
     id: 'Comfy.Workflow.WarnBlueprintOverwrite',
     name: 'Require confirmation to overwrite an existing subgraph blueprint',
     type: 'boolean',

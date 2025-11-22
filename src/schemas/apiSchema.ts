@@ -373,6 +373,8 @@ const zSettings = z.object({
   'Comfy.DevMode': z.boolean(),
   'Comfy.Workflow.ShowMissingNodesWarning': z.boolean(),
   'Comfy.Workflow.ShowMissingModelsWarning': z.boolean(),
+  'Comfy.Workflow.ModelDownloadMirror.Enabled': z.boolean(),
+  'Comfy.Workflow.ModelDownloadMirror.Endpoint': z.string(),
   'Comfy.Workflow.WarnBlueprintOverwrite': z.boolean(),
   'Comfy.DisableFloatRounding': z.boolean(),
   'Comfy.DisableSliders': z.boolean(),

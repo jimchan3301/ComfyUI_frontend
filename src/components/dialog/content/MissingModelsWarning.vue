@@ -41,6 +41,7 @@ import FileDownload from '@/components/common/FileDownload.vue'
 import NoResultsPlaceholder from '@/components/common/NoResultsPlaceholder.vue'
 import { useSettingStore } from '@/platform/settings/settingStore'
 import { isElectron } from '@/utils/envUtil'
+import { isValidUrl } from '@/utils/formatUtil'
 
 // TODO: Read this from server internal API rather than hardcoding here
 // as some installations may wish to use custom sources
@@ -62,6 +63,7 @@ interface ModelInfo {
   directory: string
   directory_invalid?: boolean
   url: string
+  originalUrl?: string
   downloading?: boolean
   completed?: boolean
   progress?: number
@@ -78,14 +80,62 @@ const { t } = useI18n()
 
 const doNotAskAgain = ref(false)
 
+/**
+ * Gets the mirror URL for a given source URL based on settings
+ * @param originalUrl The original URL to check for mirroring
+ * @returns The mirrored URL if enabled and available, otherwise the original URL
+ */
+const getMirrorUrl = (originalUrl: string): string => {
+  const settingStore = useSettingStore()
+  const mirrorEnabled = settingStore.get(
+    'Comfy.Workflow.ModelDownloadMirror.Enabled'
+  )
+
+  if (!mirrorEnabled) {
+    return originalUrl
+  }
+
+  const mirrorEndpoint = settingStore.get(
+    'Comfy.Workflow.ModelDownloadMirror.Endpoint'
+  )
+
+  if (!isValidUrl(mirrorEndpoint)) {
+    return originalUrl
+  }
+
+  // Replace huggingface.co URLs with mirror endpoint
+  if (originalUrl.startsWith('https://huggingface.co/')) {
+    try {
+      const urlObj = new URL(originalUrl)
+      const mirrorObj = new URL(mirrorEndpoint)
+
+      // Keep the original path and query parameters
+      mirrorObj.pathname = urlObj.pathname
+      mirrorObj.search = urlObj.search
+
+      const mirroredUrl = mirrorObj.toString()
+
+      return mirroredUrl
+    } catch (error) {
+      console.error('[Mirror] Error constructing mirror URL:', error)
+      return originalUrl
+    }
+  }
+
+  return originalUrl
+}
+
 const modelDownloads = ref<Record<string, ModelInfo>>({})
 const missingModels = computed(() => {
   return props.missingModels.map((model) => {
     const paths = props.paths[model.directory]
+    const mirroredUrl = getMirrorUrl(model.url)
+
     if (model.directory_invalid || !paths) {
       return {
         label: `${model.directory} / ${model.name}`,
-        url: model.url,
+        url: mirroredUrl,
+        originalUrl: model.url,
         error: 'Invalid directory specified (does this require custom nodes?)'
       }
     }
@@ -96,7 +146,8 @@ const missingModels = computed(() => {
       error: null,
       name: model.name,
       directory: model.directory,
-      url: model.url,
+      url: mirroredUrl,
+      originalUrl: model.url,
       folder_path: paths[0]
     }
     modelDownloads.value[model.name] = downloadInfo
@@ -104,20 +155,23 @@ const missingModels = computed(() => {
       if (!allowedSources.some((source) => model.url.startsWith(source))) {
         return {
           label: `${model.directory} / ${model.name}`,
-          url: model.url,
+          url: mirroredUrl,
+          originalUrl: model.url,
           error: `Download not allowed from source '${model.url}', only allowed from '${allowedSources.join("', '")}'`
         }
       }
       if (!allowedSuffixes.some((suffix) => model.name.endsWith(suffix))) {
         return {
           label: `${model.directory} / ${model.name}`,
-          url: model.url,
+          url: mirroredUrl,
+          originalUrl: model.url,
           error: `Only allowed suffixes are: '${allowedSuffixes.join("', '")}'`
         }
       }
     }
     return {
-      url: model.url,
+      url: mirroredUrl,
+      originalUrl: model.url,
       label: `${model.directory} / ${model.name}`,
       downloading: downloadInfo.downloading,
       completed: downloadInfo.completed,
